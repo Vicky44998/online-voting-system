@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Online Voting System</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: "Segoe UI", Tahoma, sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .container {
+            width: 400px;
+            max-width: 90%;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 0.6s ease;
+        }
+
+        h2 { text-align: center; margin-bottom: 25px; color: #333; }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            outline: none;
+            font-size: 15px;
+            transition: border 0.3s;
+        }
+
+        input:focus { border-color: #667eea; }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 15px;
+            border-radius: 6px;
+            border: none;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        p { text-align: center; margin-top: 10px; font-size: 14px; }
+
+        .hidden { display: none; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== Vote Page ===== */
+        #votePage { width: 100%; }
+
+        .candidate-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .candidate-box {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            transition: 0.3s;
+            border: 1px solid #ddd;
+        }
+
+        .candidate-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        .circle {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            color: white;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+        }
+
+        .red    { background: #e74c3c; }
+        .blue   { background: #3498db; }
+        .yellow { background: #f1c40f; }
+        .purple { background: #9b59b6; }
+
+        .candidate-box button {
+            margin-top: 10px;
+            padding: 10px;
+            width: 100%;
+            border: none;
+            border-radius: 6px;
+            background: #4a80c4;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .candidate-box button:hover { background: #3567a8; }
+
+        @media (max-width: 768px) {
+            .candidate-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ===== Result Page ===== */
+        #resultPage {
+            width: 100%;
+            min-height: 100vh;
+            padding: 30px;
+        }
+
+        #winnerBox {
+            font-size: 22px;
+            font-weight: bold;
+            margin: 15px 0;
+            color: #333;
+        }
+
+        .progress-bar {
+            background: #ddd;
+            border-radius: 20px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 25px;
+            color: white;
+            text-align: right;
+            padding-right: 10px;
+            line-height: 25px;
+            border-radius: 20px;
+            transition: width 1s ease-in-out;
+        }
+
+        .barA { background: #e74c3c; }
+        .barB { background: #3498db; }
+        .barC { background: #f1c40f; }
+        .barD { background: #9b59b6; }
+
+        canvas { margin-top: 20px; }
+
+        #voteStats {
+            font-size: 18px;
+            margin: 15px 0;
+            font-weight: bold;
+        }
+
+        .thank-you-container {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 18px; height: 18px;
+            border: 3px solid rgba(255,255,255,0.4);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<!-- ===== VOTER LOGIN PAGE ===== -->
+<div class="container" id="loginPage">
+    <h2>🗳️ Online Voting System</h2>
+    <input type="text"     id="voterId"   placeholder="Voter ID">
+    <input type="password" id="password"  placeholder="Password">
+    <button id="loginBtn" onclick="login()">Login</button>
+    <p id="loginError" style="color:red;"></p>
+    <p style="text-align:center; margin-top:10px;">
+        <button onclick="showAdminLogin()">Admin: View Results</button>
+    </p>
+</div>
+
+<!-- ===== VOTING PAGE ===== -->
+<div class="container hidden" id="votePage">
+    <h2>🗳️ COLLEGE ELECTION 2026</h2>
+
+    <div class="candidate-grid">
+        <div class="candidate-box">
+            <div class="circle red">V</div>
+            <h3>VIGNESH L</h3>
+            <button onclick="voteSelect('A')">Vote Now</button>
+        </div>
+        <div class="candidate-box">
+            <div class="circle blue">V</div>
+            <h3>VIGNESHWARAN</h3>
+            <button onclick="voteSelect('B')">Vote Now</button>
+        </div>
+        <div class="candidate-box">
+            <div class="circle yellow">V</div>
+            <h3>VIGNESH M</h3>
+            <button onclick="voteSelect('C')">Vote Now</button>
+        </div>
+        <div class="candidate-box">
+            <div class="circle purple">V</div>
+            <h3>VINAYAGAMOORTHY</h3>
+            <button onclick="voteSelect('D')">Vote Now</button>
+        </div>
+    </div>
+
+    <p id="voteError" style="color:red;"></p>
+</div>
+
+<!-- ===== ADMIN LOGIN PAGE ===== -->
+<div class="container hidden" id="adminLoginPage">
+    <h2>🔐 Admin Login</h2>
+    <input type="text"     id="adminId"       placeholder="Admin Username">
+    <input type="password" id="adminPassword" placeholder="Password">
+    <button id="adminLoginBtn" onclick="adminLogin()">Login</button>
+    <p id="adminLoginError" style="color:red;"></p>
+    <button onclick="backToVoterLogin()" style="background:#aaa; margin-top:10px;">← Back</button>
+</div>
+
+<!-- ===== RESULT PAGE ===== -->
+<div class="container hidden" id="resultPage">
+    <h2>📊 Election Results</h2>
+    <div id="winnerBox"></div>
+    <div id="voteStats"></div>
+    <!-- Canvas is wrapped so we can fully replace it on each load -->
+    <div id="chartWrapper"><canvas id="voteChart"></canvas></div>
+    <div id="progressContainer"></div>
+    <button onclick="logout()" style="margin-top:20px;">Logout</button>
+</div>
+
+<script>
+// ===================================================================
+//  API HELPERS
+// ===================================================================
+const API = "";   // Same origin — Flask serves this file
+
+async function post(url, body) {
+    const res = await fetch(url, {
+        method:      "POST",
+        credentials: "include",
+        headers:     { "Content-Type": "application/json" },
+        body:        JSON.stringify(body)
+    });
+    return res.json();
+}
+
+async function get(url) {
+    const res = await fetch(url, { credentials: "include" });
+    return res.json();
+}
+
+// ===================================================================
+//  VOTER LOGIN  →  calls  POST /api/voter/login
+// ===================================================================
+async function login() {
+    const voter_id  = document.getElementById("voterId").value.trim();
+    const password  = document.getElementById("password").value.trim();
+    const errEl     = document.getElementById("loginError");
+    const btn       = document.getElementById("loginBtn");
+
+    errEl.innerText = "";
+    if (!voter_id || !password) {
+        errEl.innerText = "Please enter Voter ID and Password.";
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Logging in…';
+
+    const data = await post("/api/voter/login", { voter_id, password });
+
+    btn.disabled = false;
+    btn.innerText = "Login";
+
+    if (data.success) {
+        document.getElementById("loginPage").classList.add("hidden");
+        document.getElementById("votePage").classList.remove("hidden");
+    } else {
+        errEl.innerText = data.message;
+    }
+}
+
+// ===================================================================
+//  SUBMIT VOTE  →  calls  POST /api/vote
+// ===================================================================
+async function voteSelect(candidate) {
+    document.querySelectorAll(".candidate-box button").forEach(b => b.disabled = true);
+    document.getElementById("voteError").innerText = "";
+
+    const data = await post("/api/vote", { candidate });
+
+    if (data.success) {
+        document.getElementById("votePage").classList.add("hidden");
+
+        const thankYou = document.createElement("div");
+        thankYou.className = "container thank-you-container";
+        thankYou.innerHTML = `
+            <h2>✅ Thank You for Voting!</h2>
+            <p>Your vote has been recorded successfully in the database.</p>
+            <button onclick="logout()">Logout</button>
+        `;
+        document.body.appendChild(thankYou);
+    } else {
+        document.getElementById("voteError").innerText = data.message;
+        document.querySelectorAll(".candidate-box button").forEach(b => b.disabled = false);
+    }
+}
+
+// ===================================================================
+//  ADMIN LOGIN  →  calls  POST /api/admin/login
+// ===================================================================
+async function showAdminLogin() {
+    document.getElementById("loginPage").classList.add("hidden");
+    document.getElementById("adminLoginPage").classList.remove("hidden");
+}
+
+function backToVoterLogin() {
+    document.getElementById("adminLoginPage").classList.add("hidden");
+    document.getElementById("loginPage").classList.remove("hidden");
+}
+
+async function adminLogin() {
+    const username = document.getElementById("adminId").value.trim();
+    const password = document.getElementById("adminPassword").value.trim();
+    const errEl    = document.getElementById("adminLoginError");
+    const btn      = document.getElementById("adminLoginBtn");
+
+    errEl.innerText = "";
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Logging in…';
+
+    const data = await post("/api/admin/login", { username, password });
+
+    btn.disabled = false;
+    btn.innerText = "Login";
+
+    if (data.success) {
+        document.getElementById("adminLoginPage").classList.add("hidden");
+        document.getElementById("resultPage").classList.remove("hidden");
+        await showResults();
+    } else {
+        errEl.innerText = data.message;
+    }
+}
+
+// ===================================================================
+//  SHOW RESULTS  →  calls  GET /api/results
+// ===================================================================
+let chartInstance = null;
+
+async function showResults() {
+    const data = await get("/api/results");
+    if (!data.success) return;
+
+    const { candidates, total_voters, total_votes, winners } = data;
+
+    // Winner
+    document.getElementById("winnerBox").innerHTML =
+        winners.map(w => `🏆 <strong>${w}</strong>`).join(" &amp; ") +
+        (total_votes === 0 ? "<br><small>No votes yet</small>" : "");
+
+    // Stats
+    const turnout = total_voters
+        ? ((total_votes / total_voters) * 100).toFixed(1)
+        : 0;
+    document.getElementById("voteStats").innerHTML = `
+        🧑 Total Voters: ${total_voters} &nbsp;|&nbsp;
+        ✅ Votes Cast: ${total_votes} &nbsp;|&nbsp;
+        📊 Turnout: ${turnout}%
+    `;
+
+    // Progress bars
+    const barClasses = ["barA", "barB", "barC", "barD"];
+    document.getElementById("progressContainer").innerHTML =
+        candidates.map((c, i) => {
+            const pct = total_votes ? ((c.vote_count / total_votes) * 100).toFixed(1) : 0;
+            return `
+                <div style="margin-top:10px"><strong>${c.name}</strong> — ${c.vote_count} votes (${pct}%)</div>
+                <div class="progress-bar">
+                    <div class="progress-fill ${barClasses[i]}" style="width:${pct}%">${pct}%</div>
+                </div>`;
+        }).join("");
+
+    // ✅ FIX: Destroy old chart instance AND replace the canvas element
+    // to fully clear any residual Chart.js state from previous renders.
+    if (chartInstance) {
+        chartInstance.destroy();
+        chartInstance = null;
+    }
+    const wrapper = document.getElementById("chartWrapper");
+    wrapper.innerHTML = '<canvas id="voteChart"></canvas>';
+
+    const ctx = document.getElementById("voteChart").getContext("2d");
+    chartInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels:   candidates.map(c => c.name),
+            datasets: [{
+                label:           "Votes",
+                data:            candidates.map(c => c.vote_count),
+                backgroundColor: ["#e74c3c", "#3498db", "#f1c40f", "#9b59b6"]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales:  { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+}
+
+// ===================================================================
+//  LOGOUT  →  calls  POST /api/logout
+// ===================================================================
+async function logout() {
+    await post("/api/logout", {});
+
+    // Reset UI
+    ["votePage", "resultPage", "adminLoginPage"].forEach(id =>
+        document.getElementById(id).classList.add("hidden")
+    );
+    document.getElementById("loginPage").classList.remove("hidden");
+
+    document.getElementById("voterId").value   = "";
+    document.getElementById("password").value  = "";
+    document.getElementById("loginError").innerText = "";
+
+    // ✅ FIX: Also destroy chart on logout to ensure clean state next visit
+    if (chartInstance) {
+        chartInstance.destroy();
+        chartInstance = null;
+    }
+    const wrapper = document.getElementById("chartWrapper");
+    if (wrapper) wrapper.innerHTML = '<canvas id="voteChart"></canvas>';
+
+    document.querySelectorAll(".thank-you-container").forEach(c => c.remove());
+}
+
+// Allow Enter key on login page
+document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("password").addEventListener("keypress", e => {
+        if (e.key === "Enter") login();
+    });
+    document.getElementById("adminPassword").addEventListener("keypress", e => {
+        if (e.key === "Enter") adminLogin();
+    });
+});
+</script>
+
+</body>
+</html>
